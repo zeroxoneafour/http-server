@@ -42,10 +42,11 @@ func (s *HTTPServer) handleRequest(conn net.Conn) {
 		log.Fatal(err) // idk
 	}
 	client.res = NewHTTPResponse(s.resDefaults) // initialize with defaults
+	var status Status                           // declared here so go doesn't cry
 	if s.handlers[client.req.method] != nil {
-		status := s.handlers[client.req.method](client) // invoke handler for method, set by s.SetHandler
+		status = s.handlers[client.req.method](client) // invoke handler for method, set by s.SetHandler
 	} else {
-		status := 501 // not implemented
+		status = 501 // not implemented
 	}
 	client.res.SetStatus(status, s.resDefaults)    // set statusString with defaults
 	client.conn.Write([]byte(client.res.String())) // write response to client
