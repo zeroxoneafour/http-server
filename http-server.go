@@ -24,7 +24,7 @@ func New(host, port string) *HTTPServer { // creates new HTTPServer obviously
 	ret.server = new(TCPServer)
 	ret.server.host = host
 	ret.server.port = port
-	ret.handlers = make([]func(*HTTPClient) Status, 2) // GET POST
+	ret.handlers = make([]func(*HTTPClient) Status, 9) // GET HEAD POST PUT DELETE CONNECT OPTIONS TRACE PATCH
 	ret.resDefaults = NewHTTPResponseConfig()
 	return ret
 }
@@ -41,11 +41,15 @@ func (s *HTTPServer) handleRequest(conn net.Conn) {
 	if err != nil {
 		log.Fatal(err) // idk
 	}
-	client.res = NewHTTPResponse(s.resDefaults)     // initialize with defaults
-	status := s.handlers[client.req.method](client) // invoke handler for method, set by s.SetHandler
-	client.res.SetStatus(status, s.resDefaults)     // set statusString with defaults
-	client.conn.Write([]byte(client.res.String()))  // write response to client
-	client.conn.Close()                             // pretty important
+	client.res = NewHTTPResponse(s.resDefaults) // initialize with defaults
+	if s.handlers[client.req.method] != nil {
+		status := s.handlers[client.req.method](client) // invoke handler for method, set by s.SetHandler
+	} else {
+		status := 501 // not implemented
+	}
+	client.res.SetStatus(status, s.resDefaults)    // set statusString with defaults
+	client.conn.Write([]byte(client.res.String())) // write response to client
+	client.conn.Close()                            // pretty important
 }
 
 func (s *HTTPServer) Run() {

@@ -16,7 +16,14 @@ type Status uint
 
 const (
 	GET Method = iota // various methods
+	HEAD
 	POST
+	PUT
+	DELETE
+	CONNECT
+	OPTIONS
+	TRACE
+	PATCH
 )
 
 type HTTPMessage struct { // common between requests and responses
@@ -59,15 +66,29 @@ func (r *HTTPRequest) ReadRequest(req io.Reader) error {
 		if firstLine {
 			components := strings.Fields(line) // ex. GET / HTTP/1.1
 			if len(components) != 3 {
-				return errors.New("Failed reading HTTP Method")
+				return errors.New("Failed reading HTTP start line")
 			}
 			switch components[0] { // ex. GET
 			case "GET":
 				r.method = GET
+			case "HEAD":
+				r.method = HEAD
 			case "POST":
 				r.method = POST
+			case "PUT":
+				r.method = PUT
+			case "DELETE":
+				r.method = DELETE
+			case "CONNECT":
+				r.method = CONNECT
+			case "OPTIONS":
+				r.method = OPTIONS
+			case "TRACE":
+				r.method = TRACE
+			case "PATCH":
+				r.method = PATCH
 			default:
-				return errors.New("Failed reading HTTP Method")
+				return errors.New("Failed reading HTTP method")
 			}
 			r.uri = components[1]     // ex. /
 			r.version = components[2] // ex. HTTP/1.1
