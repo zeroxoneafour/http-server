@@ -8,15 +8,15 @@ import (
 )
 
 type HTTPServer struct { // main server, contains resDefaults config, a tcp server, and handlers for various methods
-	server      *TCPServer
-	resDefaults *HTTPResponseConfig
-	handlers    []func(*HTTPClient) Status // returns status so it can be set manually by server
+	server   *TCPServer
+	Defaults *HTTPResponseConfig
+	handlers []func(*HTTPClient) Status // returns status so it can be set manually by server
 }
 
 type HTTPClient struct { // a client, with raw IO and request/response structs
 	conn net.Conn
-	req  *HTTPRequest
-	res  *HTTPResponse
+	Req  *HTTPRequest
+	Res  *HTTPResponse
 }
 
 func New(host, port string) *HTTPServer { // creates new HTTPServer obviously
@@ -25,7 +25,7 @@ func New(host, port string) *HTTPServer { // creates new HTTPServer obviously
 	ret.server.host = host
 	ret.server.port = port
 	ret.handlers = make([]func(*HTTPClient) Status, 9) // GET HEAD POST PUT DELETE CONNECT OPTIONS TRACE PATCH
-	ret.resDefaults = NewHTTPResponseConfig()
+	ret.Defaults = NewHTTPResponseConfig()
 	return ret
 }
 
@@ -36,21 +36,21 @@ func (s *HTTPServer) SetHandler(method Method, handler func(*HTTPClient) Status)
 func (s *HTTPServer) handleRequest(conn net.Conn) {
 	client := new(HTTPClient) // new HTTPClient
 	client.conn = conn        // not really neccessary to the struct and probably a security risk, oh well
-	client.req = NewHTTPRequest()
-	err := client.req.ReadRequest(client.conn) // read request from connection raw data
+	defer client.conn.Close() // pretty important
+	client.Req = NewHTTPRequest()
+	err := client.Req.ReadRequest(client.conn) // read request from connection raw data
 	if err != nil {
-		log.Fatal(err) // idk
+		log.Panic(err) // idk
 	}
-	client.res = NewHTTPResponse(s.resDefaults) // initialize with defaults
-	var status Status                           // declared here so go doesn't cry
-	if s.handlers[client.req.method] != nil {
-		status = s.handlers[client.req.method](client) // invoke handler for method, set by s.SetHandler
+	client.Res = NewHTTPResponse(s.Defaults) // initialize with defaults
+	var status Status                        // declared here so go doesn't cry
+	if s.handlers[client.Req.method] != nil {
+		status = s.handlers[client.Req.method](client) // invoke handler for method, set by s.SetHandler
 	} else {
 		status = 501 // not implemented
 	}
-	client.res.SetStatus(status, s.resDefaults)    // set statusString with defaults
-	client.conn.Write([]byte(client.res.String())) // write response to client
-	client.conn.Close()                            // pretty important
+	client.Res.SetStatus(status, s.Defaults)       // set statusString with defaults
+	client.conn.Write([]byte(client.Res.String())) // write response to client
 }
 
 func (s *HTTPServer) Run() {

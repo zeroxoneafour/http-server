@@ -28,14 +28,14 @@ const (
 
 type HTTPMessage struct { // common between requests and responses
 	version string
-	headers map[string]string
-	content string
+	Headers map[string]string
+	Content string
 }
 
 type HTTPRequest struct {
 	HTTPMessage
 	method Method
-	uri    string // the location of the resource
+	path   string // the location of the resource
 }
 
 type HTTPResponse struct {
@@ -46,12 +46,12 @@ type HTTPResponse struct {
 
 type HTTPResponseConfig struct { // default res settings
 	statuses map[Status]string
-	headers  map[string]string
+	Headers  map[string]string
 }
 
 func NewHTTPRequest() *HTTPRequest {
 	ret := new(HTTPRequest)
-	ret.headers = make(map[string]string)
+	ret.Headers = make(map[string]string)
 	return ret
 }
 
@@ -90,19 +90,19 @@ func (r *HTTPRequest) ReadRequest(req io.Reader) error {
 			default:
 				return errors.New("Failed reading HTTP method")
 			}
-			r.uri = components[1]     // ex. /
+			r.path = components[1]    // ex. /
 			r.version = components[2] // ex. HTTP/1.1
 			firstLine = false
 		} else { // basic headers and stuff
 			header, value, found := strings.Cut(line, ":") // cut at ':'. Function below trims off spaces and stuff
 			if found {
-				r.headers[strings.Title(strings.Trim(header, " \n\r"))] = strings.Trim(value, " \n\r") // Splits ex. Host: localhost:8000 into { "Host": "localhost:8000" }
+				r.Headers[strings.Title(strings.Trim(header, " \n\r"))] = strings.Trim(value, " \n\r") // Splits ex. Host: localhost:8000 into { "Host": "localhost:8000" }
 			} else {
-				if value, ok := r.headers["Content-Length"]; ok { // if no content then just don't do the parsing
+				if value, ok := r.Headers["Content-Length"]; ok { // if no content then just don't do the parsing
 					contentLength, _ := strconv.Atoi(value)
 					buffer := make([]byte, contentLength)
 					reader.Read(buffer) // read the content
-					r.content = string(buffer)
+					r.Content = string(buffer)
 				}
 				return nil
 			}
@@ -110,13 +110,17 @@ func (r *HTTPRequest) ReadRequest(req io.Reader) error {
 	}
 }
 
+func (r *HTTPRequest) GetPath() string {
+	return r.path
+}
+
 func NewHTTPResponse(defaults *HTTPResponseConfig) *HTTPResponse {
 	ret := new(HTTPResponse)
 	ret.version = "HTTP/1.1" // can't really change this right now, not compliant with ex. HTTP/2 really
-	ret.headers = make(map[string]string)
+	ret.Headers = make(map[string]string)
 	if defaults != nil {
-		for header, value := range defaults.headers {
-			ret.headers[header] = value
+		for header, value := range defaults.Headers {
+			ret.Headers[header] = value
 		}
 	}
 	return ret
@@ -131,12 +135,12 @@ func (r *HTTPResponse) SetStatus(status Status, defaults *HTTPResponseConfig) { 
 
 func (r *HTTPResponse) String() string { // converts a *HTTPResponse to a string for sending to client
 	ret := r.version + " " + fmt.Sprint(r.status) + " " + string(r.statusText) + "\n"
-	for header, value := range r.headers {
+	for header, value := range r.Headers {
 		ret += header + ": " + value + "\n"
 	}
-	if len(r.content) > 0 {
+	if len(r.Content) > 0 {
 		ret += "\n" // extra \n because http
-		ret += r.content
+		ret += r.Content
 	}
 	return ret
 }
@@ -144,7 +148,7 @@ func (r *HTTPResponse) String() string { // converts a *HTTPResponse to a string
 func NewHTTPResponseConfig() *HTTPResponseConfig { // this config is for default headers and stuff so they aren't required to be set manually each time
 	ret := new(HTTPResponseConfig)
 	ret.statuses = make(map[Status]string)
-	ret.headers = make(map[string]string)
+	ret.Headers = make(map[string]string)
 	// default statuses
 	ret.statuses[200] = "OK"
 	ret.statuses[201] = "Created"
@@ -152,6 +156,6 @@ func NewHTTPResponseConfig() *HTTPResponseConfig { // this config is for default
 	ret.statuses[404] = "Not Found"
 	ret.statuses[418] = "I'm a teapot" // teapot
 	// go server
-	ret.headers["Server"] = "Go http-server"
+	ret.Headers["Server"] = "Go http-server"
 	return ret
 }

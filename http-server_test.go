@@ -7,7 +7,7 @@ import (
 )
 
 func getHandler(client *HTTPClient) Status {
-	filename := "." + client.req.uri
+	filename := "." + client.Req.GetPath()
 	file, err := os.Open(filename)
 	defer file.Close()
 	if err != nil {
@@ -18,14 +18,14 @@ func getHandler(client *HTTPClient) Status {
 	if err != nil {
 		return 403
 	}
-	client.res.content = string(content)
-	client.res.headers["Content-Length"] = fmt.Sprint(fileinfo.Size())
+	client.Res.Content = string(content)
+	client.Res.Headers["Content-Length"] = fmt.Sprint(fileinfo.Size())
 	return 200
 }
 
 func TestHTTPServer(t *testing.T) {
 	server := New("localhost", "8000")
 	server.SetHandler(GET, getHandler)
-	server.resDefaults.headers["Server"] = "Go test server"
+	server.Defaults.Headers["Server"] = "Go test server"
 	server.Run()
 }
